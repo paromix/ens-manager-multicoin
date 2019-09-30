@@ -8,12 +8,12 @@
       <button v-on:click="onClickSearch">Search Resolver</button>
     </div>
     <div class="resolver-address">
-      Resolver Address : {{ resolver }}
+      Resolver Address : {{ resolverAddr }}
     </div>
     <div class="owner-info">
       Owner : {{ owner }}
     </div>
-    <h2>User Address Information</h2>
+    <h2>Setting User Address Information</h2>
     <div class="addressInfo">
       <div class="coinType">
         <select v-model="coinSeleted">
@@ -29,11 +29,30 @@
         <button v-on:click="onClickDoIt">Do It</button>
       </div>
     </div>
+    <h2>Check Address for Domain</h2>
+    <div class="check-domain-addr">
+      <div class="coinType">
+        <select v-model="coinSeleted">
+          <option value="bitcoin">bitcoin</option>
+          <option value="ethereum">ethereum</option>
+          <option value="ripple">ripple</option>
+        </select>
+      </div>
+      <div class="domain-test">
+        <input v-model="domainTest" placeholder="Domain Name">
+        <button v-on:click="onClickTest">Test</button>
+      </div>
+    </div>
+    <div class="domain-address">
+      Domain Address : {{ domainAddr }}
+    </div>
   </div>
 </template>
 
 <script>
 import ENS from 'ethereum-ens'
+import namehash from 'eth-ens-namehash'
+import Web3 from 'web3'
 
 export default {
   name: 'app',
@@ -42,10 +61,17 @@ export default {
       domain: 'dcentwallet.eth',
       address: '0xCf62412A7717E90ec7D47f338015C0b5c8F281ae',
       coinSeleted: 'ethereum',
-      resolver: '',
+      
+      resolverAddr: '',
       owner: '',
+
       accounts: undefined,
+      web3: undefined,
       ens: undefined,
+      multicoinSupport: false,
+      
+      domainTest: 'dcentwallet.eth',
+      domainAddr: '',
     }
   },
   methods: {
@@ -57,7 +83,7 @@ export default {
       if (typeof this.domain === 'undefined') {
         alert('No Domain Name')
         return false
-      } else if (this.resolver.length === 0) {
+      } else if (this.resolverAddr.length === 0) {
         alert('Search Resolver First')
         return false
       } else if (typeof this.coinSeleted === 'undefined') {
@@ -80,9 +106,19 @@ export default {
         return false
       }
       console.log('wallet detected')
-      this.accounts = window.ethereum.enable()
+
+      // #
+      //
+
+       window.ethereum.enable().then((response) => {
+        console.log('enable response = ', response)
+        this.accounts = response[0]
+        console.log('this.accounts = ', this.accounts)
+       })
       this.ens = new ENS(window.ethereum)
-      console.log('this.accounts = ', this.accounts)
+      this.web3 = new Web3(window.ethereum)
+
+      console.log('this.ens = ', this.ens)
       return true
     },
     onClickSearch () {
@@ -91,7 +127,26 @@ export default {
         return
       }
 
+      // REF : https://github.com/ensdomains/ensjs/blob/master/index.js
+
       console.log('Lets Search Resolver')
+      const resolverContract = this.ens.resolver(this.domain)
+      console.log('resolverContract = ', resolverContract)
+      
+      const domainOwner = this.ens.owner(this.domain).then((ownerAddr) => {
+        console.log('ownerAddr = ', ownerAddr)
+        this.owner = ownerAddr
+      })
+      resolverContract.resolverAddress().then((address) => {
+        console.log('address = ', address)
+        this.resolverAddr = address
+      })
+
+      // REF : https://github.com/Arachnid/EIPs/blob/ens-multichain/EIPS/eip-draft-ens-multicoin.md
+      // Interface ID for multicoin is 0xf1cb7e06
+      const isSupport = typeof resolverContract['0xf1cb7e06'] !== 'undefined'
+      console.log('isSupport = ', isSupport)
+      this.multicoinSupport = isSupport
     },
     onClickDoIt () {
       console.log('onClickDoIt')
@@ -100,9 +155,39 @@ export default {
         return
       }else if(!this.checkInput()){
         return
+      }else if(!this.multicoinSupport){
+        alert('This Resolver is not multicoin support')
+        return
+      }else if(this.accounts !== this.owner) {
+        alert(`This Account ${this.accounts} is not owner of resolver ${this.owner}`)
+        return
       }
 
       console.log('Lets Do it')
+      alert('NOT IMPLEMENTED')
+    },
+    onClickTest () {
+      if(!this.checkWallet()) {
+        return
+      }else if(typeof this.domainTest === 'undefined' || this.domainTest.length === 0){
+        alert('No Domain Name to test')
+        return
+      }
+
+      console.log('this.domainTest = ', this.domainTest)
+      const resolverContract = this.ens.resolver(this.domainTest)
+      const node = namehash.hash(this.domainTest)
+      if (typeof resolverContract['0xf1cb7e06'] === 'undefined') {
+        alert('Resolver is not support multicoin')
+        resolverContract.addr().then((address) => {
+          this.domainAddr = address
+        })
+        return
+      }
+
+      // #
+      //
+      alert('NOT IMPLEMENTED')
     }
   }
 }
@@ -138,11 +223,21 @@ h1, h2 {
 }
 
 .addressInfo .address input {
-  width: 400px;
+  width: 350px;
   margin-left: 10px;
 }
 
 .addressInfo button {
+  margin-left: 5px;
+}
+
+.check-domain-addr {
+  display: inline-flex;
+}
+
+.domain-test input {
+  width: 350px;
+  margin-bottom: 10px;
   margin-left: 10px;
 }
 
