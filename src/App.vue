@@ -33,6 +33,8 @@
 </template>
 
 <script>
+import ENS from 'ethereum-ens'
+
 export default {
   name: 'app',
   data () {
@@ -42,6 +44,8 @@ export default {
       coinSeleted: 'ethereum',
       resolver: '',
       owner: '',
+      accounts: undefined,
+      ens: undefined,
     }
   },
   methods: {
@@ -67,11 +71,18 @@ export default {
       return true
     },
     checkWallet () {
+      if (typeof this.accounts !== 'undefined') {
+        return true
+      }
+
       if (typeof window.ethereum === 'undefined') {
         alert('No Wallet like Metamask')
         return false
       }
       console.log('wallet detected')
+      this.accounts = window.ethereum.enable()
+      this.ens = new ENS(window.ethereum)
+      console.log('this.accounts = ', this.accounts)
       return true
     },
     onClickSearch () {
