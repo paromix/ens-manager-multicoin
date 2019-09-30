@@ -2,6 +2,7 @@
   <div id="app">
     <img src="./assets/logo.png">
     <h1>D'CENT Wallet ENS manager</h1>
+    <h2>ChainID : {{networkName}}</h2>
     <h2>Resolver Information</h2>
     <div class="contract">
       <input v-model="domain" placeholder="Domain Name">
@@ -16,10 +17,10 @@
     <h2>Setting User Address Information</h2>
     <div class="addressInfo">
       <div class="coinType">
-        <select v-model="coinSeleted">
-          <option value="bitcoin">bitcoin</option>
-          <option value="ethereum">ethereum</option>
-          <option value="ripple">ripple</option>
+        <select v-model="coinSeletedSetting">
+          <option v-for="option in options" v-bind:key="option.value" v-bind:value="option.value">
+            {{ option.text }}
+          </option>
         </select>
       </div>
       <div class="address">
@@ -32,7 +33,7 @@
     <h2>Check Address for Domain</h2>
     <div class="check-domain-addr">
       <div class="coinType">
-        <select v-model="coinSeleted">
+        <select v-model="coinSeletedTest">
           <option value="bitcoin">bitcoin</option>
           <option value="ethereum">ethereum</option>
           <option value="ripple">ripple</option>
@@ -58,9 +59,16 @@ export default {
   name: 'app',
   data () {
     return {
+      networkName: 'No Connection',
       domain: 'dcentwallet.eth',
       address: '0xCf62412A7717E90ec7D47f338015C0b5c8F281ae',
-      coinSeleted: 'ethereum',
+      coinSeletedSetting: 'ethereum',
+      coinSeletedTest: 'ethereum',
+      options: [
+        {text: 'bitcoin', value: 'bitcoin'},
+        {text: 'ethereum', value: 'ethereum'},
+        {text: 'ripple', value: 'ripple'},
+      ],
       
       resolverAddr: '',
       owner: '',
@@ -118,6 +126,27 @@ export default {
       this.ens = new ENS(window.ethereum)
       this.web3 = new Web3(window.ethereum)
 
+      switch(Number(window.ethereum.chainId)){
+        case 1:
+          this.networkName = "Mainnet"
+          break
+        case 3:
+          this.networkName = "Ropsten"
+          break
+        case 4:
+          this.networkName = "Rinkeby"
+          break
+        case 5:
+          this.networkName = "Goerli"
+          break
+        case 42:
+          this.networkName = "Kovan"
+          break
+        default:
+          this.networkName = "Unknown"
+          break
+      }
+
       console.log('this.ens = ', this.ens)
       return true
     },
@@ -150,6 +179,8 @@ export default {
     },
     onClickDoIt () {
       console.log('onClickDoIt')
+      console.log('coin : ', this.coinSeletedSetting)
+      console.log('address : ', this.address)
 
       if(!this.checkWallet()) {
         return
@@ -167,6 +198,8 @@ export default {
       alert('NOT IMPLEMENTED')
     },
     onClickTest () {
+      console.log('coin : ', this.coinSeletedTest)
+
       if(!this.checkWallet()) {
         return
       }else if(typeof this.domainTest === 'undefined' || this.domainTest.length === 0){
