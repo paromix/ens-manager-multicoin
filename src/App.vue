@@ -86,7 +86,7 @@ export default {
     checkInput () {
       console.log('this.domain = ', this.domain)
       console.log('this.address = ', this.address)
-      console.log('this.coinSeleted = ', this.coinSeleted)
+      console.log('this.coinSeletedSetting = ', this.coinSeletedSetting)
 
       if (typeof this.domain === 'undefined') {
         alert('No Domain Name')
@@ -94,7 +94,7 @@ export default {
       } else if (this.resolverAddr.length === 0) {
         alert('Search Resolver First')
         return false
-      } else if (typeof this.coinSeleted === 'undefined') {
+      } else if (typeof this.coinSeletedSetting === 'undefined') {
         alert('No Coin Seleted')
         return false
       } else if (typeof this.address === 'undefined') {
