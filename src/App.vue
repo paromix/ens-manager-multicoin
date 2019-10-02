@@ -56,15 +56,18 @@ import namehash from 'eth-ens-namehash'
 import Web3 from 'web3'
 import ResolverABI from './resolverAbi'
 import Base58check from 'bs58check'
+import RippleBase58Check from 'ripple-bs58check'
 
 export default {
   name: 'app',
   data () {
     return {
       networkName: 'No Connection',
-      domain: 'dcentwallet.eth',
+      domain: 'test.dcentwallet.eth',
       address: '0xCf62412A7717E90ec7D47f338015C0b5c8F281ae',
       coinSeletedSetting: 'ethereum',
+      //address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
+      //coinSeletedSetting: 'bitcoin',
       coinSeletedTest: 'ethereum',
       options: [
         {text: 'bitcoin', value: 'bitcoin'},
@@ -74,13 +77,14 @@ export default {
       
       resolverAddr: '',
       owner: '',
+      contractResolver: undefined,
 
       accounts: undefined,
       web3: undefined,
       ens: undefined,
       multicoinSupport: false,
       
-      domainTest: 'testthing.eth',
+      domainTest: 'test.dcentwallet.eth',
       domainAddr: '',
     }
   },
@@ -171,18 +175,23 @@ export default {
       resolverContract.resolverAddress().then((address) => {
         console.log('address = ', address)
         this.resolverAddr = address
-      })
+        const web3 = this.web3
+        const contract = new web3.eth.Contract(ResolverABI.resolverMulticoinInterface, address)
+        // REF : https://github.com/Arachnid/EIPs/blob/ens-multichain/EIPS/eip-draft-ens-multicoin.md
+        contract.methods.supportsInterface('0xf1cb7e06').call().then((isSupport) => {
+          console.log('isSupport = ', isSupport)
+          this.multicoinSupport = isSupport
+        })
 
-      // REF : https://github.com/Arachnid/EIPs/blob/ens-multichain/EIPS/eip-draft-ens-multicoin.md
-      // Interface ID for multicoin is 0xf1cb7e06
-      const isSupport = typeof resolverContract['0xf1cb7e06'] !== 'undefined'
-      console.log('isSupport = ', isSupport)
-      this.multicoinSupport = isSupport
+        this.contractResolver = contract
+      })
+  
     },
     onClickDoIt () {
       console.log('onClickDoIt')
       console.log('coin : ', this.coinSeletedSetting)
       console.log('address : ', this.address)
+      console.log('domain : ', this.domain)
 
       if(!this.checkWallet()) {
         return
@@ -191,13 +200,39 @@ export default {
       }else if(!this.multicoinSupport){
         alert('This Resolver is not multicoin support')
         return
-      }else if(this.accounts !== this.owner) {
+      }else if(this.accounts.toLowerCase() !== this.owner.toLowerCase()) {
         alert(`This Account ${this.accounts} is not owner of resolver ${this.owner}`)
         return
       }
 
       console.log('Lets Do it')
-      alert('NOT IMPLEMENTED')
+      let registAddr = this.address
+      switch(this.coinSeletedSetting){
+        case 'ethereum':
+          break
+        case 'bitcoin':
+          console.log('this.address = ', this.address)
+          registAddr = Base58check.decode(registAddr).toString('hex')
+          break
+        case 'ripple':
+          registAddr = RippleBase58Check.decode(registAddr).toString('hex')
+          break
+      }
+
+      if(!registAddr.startsWith('0x')){
+        registAddr = '0x' + registAddr
+      }
+
+      const contract = this.contractResolver
+      const node = namehash.hash(this.domain)
+      const coinType = this.getChainId(this.coinSeletedSetting)
+      console.log('node = ', node)
+      console.log('coinType = ', coinType)
+      console.log('registAddr = ', registAddr)
+      contract.methods.setAddr(node, coinType, registAddr).send({from: this.accounts}).then((response) => {
+      //contract.methods.setAddr(node, registAddr).send({from: this.accounts}).then((response) => {
+        console.log('response = ', response)
+      })
     },
     getChainId (option) {
       switch(option){
@@ -246,8 +281,7 @@ export default {
               case "ethereum": 
                 this.domainAddr = address
                 break
-              case "bitcoin":
-              case "ripple":
+              case "bitcoin":{
                 if(address.startsWith('0x')) {
                   address = address.slice(2)
                 }
@@ -255,6 +289,16 @@ export default {
                 const bytes = Buffer.from(address, 'hex')
                 this.domainAddr = Base58check.encode(bytes)
                 break
+              }
+              case "ripple":{
+                if(address.startsWith('0x')) {
+                  address = address.slice(2)
+                }
+                console.log('address = ', address)
+                const bytes = Buffer.from(address, 'hex')
+                this.domainAddr = RippleBase58Check.encode(bytes)
+                break
+              }
             }
           })
           let test = Base58check.decode('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa').toString('hex')

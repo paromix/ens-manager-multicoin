@@ -313,6 +313,23 @@ module.exports = {
           "outputs": [],
           "type": "function"
         },
+        {
+          "constant": false,
+          "inputs": [
+            {
+              "name": "node",
+              "type": "bytes32"
+            },
+            {
+              "name": "addr",
+              "type": "address"
+            }
+          ],
+          "name": "setAddr",
+          "outputs": [],
+          "type": "function"
+        },
+  
       ]
   
   }
