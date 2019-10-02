@@ -92,6 +92,24 @@ module.exports = {
         "constant": true,
         "inputs": [
           {
+            "name": "interfaceID",
+            "type": "bytes4"
+          }
+        ],
+        "name": "supportsInterface",
+        "outputs": [
+          {
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "payable": false,
+        "type": "function"
+      },
+      {
+        "constant": true,
+        "inputs": [
+          {
             "name": "node",
             "type": "bytes32"
           }
@@ -240,12 +258,30 @@ module.exports = {
           "constant": true,
           "inputs": [
             {
+              "name": "interfaceID",
+              "type": "bytes4"
+            }
+          ],
+          "name": "supportsInterface",
+          "outputs": [
+            {
+              "name": "",
+              "type": "bool"
+            }
+          ],
+          "payable": false,
+          "type": "function"
+        },
+        {
+          "constant": true,
+          "inputs": [
+            {
               "name": "node",
               "type": "bytes32"
             },
             {
                 "name": "coinType",
-                "type": "uint"
+                "type": "uint256"
             },
           ],
           "name": "addr",
@@ -266,7 +302,7 @@ module.exports = {
             },
             {
                 "name": "coinType",
-                "type": "unit"
+                "type": "uint256"
             },
             {
               "name": "addr",

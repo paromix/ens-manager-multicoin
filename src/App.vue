@@ -54,6 +54,8 @@
 import ENS from 'ethereum-ens'
 import namehash from 'eth-ens-namehash'
 import Web3 from 'web3'
+import ResolverABI from './resolverAbi'
+import Base58check from 'bs58check'
 
 export default {
   name: 'app',
@@ -78,7 +80,7 @@ export default {
       ens: undefined,
       multicoinSupport: false,
       
-      domainTest: 'dcentwallet.eth',
+      domainTest: 'testthing.eth',
       domainAddr: '',
     }
   },
@@ -197,6 +199,14 @@ export default {
       console.log('Lets Do it')
       alert('NOT IMPLEMENTED')
     },
+    getChainId (option) {
+      switch(option){
+        case "ethereum": return "60"
+        case "bitcoin": return "0"
+        case "ripple": return "144"
+        default: throw new Error('Invalid Option')
+      }
+    },
     onClickTest () {
       console.log('coin : ', this.coinSeletedTest)
 
@@ -209,18 +219,48 @@ export default {
 
       console.log('this.domainTest = ', this.domainTest)
       const resolverContract = this.ens.resolver(this.domainTest)
-      const node = namehash.hash(this.domainTest)
-      if (typeof resolverContract['0xf1cb7e06'] === 'undefined') {
-        alert('Resolver is not support multicoin')
-        resolverContract.addr().then((address) => {
-          this.domainAddr = address
-        })
-        return
-      }
+      resolverContract.resolverAddress().then((resolverAddress) => {
+        const web3 = this.web3
+        console.log('resolverAddress = ', resolverAddress)
+        const contract = new web3.eth.Contract(ResolverABI.resolverMulticoinInterface, resolverAddress)
+        contract.methods.supportsInterface('0xf1cb7e06').call().then((isSupport) => {
+          console.log('isSupport = ', isSupport)
+          if (!isSupport) {
+            alert('Resolver is not support multicoin')
+            resolverContract.addr().then((address) => {
+              this.domainAddr = address
+            })
+            return
+          }
 
-      // #
-      //
-      alert('NOT IMPLEMENTED')
+          const node = namehash.hash(this.domainTest)
+          const chainId = this.getChainId(this.coinSeletedTest)
+          console.log('chainId = ', chainId)
+          contract.methods.addr(node, chainId).call().then((address) => {
+            console.log('address = ', address)
+            if (!address) {
+              this.domainAddr = 'No Address'
+              return
+            }
+            switch(this.coinSeletedTest){
+              case "ethereum": 
+                this.domainAddr = address
+                break
+              case "bitcoin":
+              case "ripple":
+                if(address.startsWith('0x')) {
+                  address = address.slice(2)
+                }
+                console.log('address = ', address)
+                const bytes = Buffer.from(address, 'hex')
+                this.domainAddr = Base58check.encode(bytes)
+                break
+            }
+          })
+          let test = Base58check.decode('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa').toString('hex')
+          console.log('test = ', test)
+        })
+      })
     }
   }
 }
