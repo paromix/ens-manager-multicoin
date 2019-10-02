@@ -47,6 +47,9 @@
     <div class="domain-address">
       Domain Address : {{ domainAddr }}
     </div>
+    <div class="domain-address-name">
+      Domain Name : {{ domainAddrName }}
+    </div>
   </div>
 </template>
 
@@ -86,6 +89,7 @@ export default {
       
       domainTest: 'test.dcentwallet.eth',
       domainAddr: '',
+      domainAddrName: '',
     }
   },
   methods: {
@@ -168,7 +172,7 @@ export default {
       const resolverContract = this.ens.resolver(this.domain)
       console.log('resolverContract = ', resolverContract)
       
-      const domainOwner = this.ens.owner(this.domain).then((ownerAddr) => {
+      this.ens.owner(this.domain).then((ownerAddr) => {
         console.log('ownerAddr = ', ownerAddr)
         this.owner = ownerAddr
       })
@@ -187,52 +191,94 @@ export default {
       })
   
     },
+    setNameToReverse () {
+
+    },
     onClickDoIt () {
-      console.log('onClickDoIt')
-      console.log('coin : ', this.coinSeletedSetting)
-      console.log('address : ', this.address)
-      console.log('domain : ', this.domain)
+        console.log('onClickDoIt')
+        console.log('coin : ', this.coinSeletedSetting)
+        console.log('address : ', this.address)
+        console.log('domain : ', this.domain)
 
-      if(!this.checkWallet()) {
-        return
-      }else if(!this.checkInput()){
-        return
-      }else if(!this.multicoinSupport){
-        alert('This Resolver is not multicoin support')
-        return
-      }else if(this.accounts.toLowerCase() !== this.owner.toLowerCase()) {
-        alert(`This Account ${this.accounts} is not owner of resolver ${this.owner}`)
-        return
-      }
+        if(!this.checkWallet()) {
+            return
+        }else if(!this.checkInput()){
+            return
+        }else if(!this.multicoinSupport){
+            alert('This Resolver is not multicoin support')
+            return
+        }else if(this.accounts.toLowerCase() !== this.owner.toLowerCase()) {
+            alert(`This Account ${this.accounts} is not owner of resolver ${this.owner}`)
+            return
+        }
 
-      console.log('Lets Do it')
-      let registAddr = this.address
-      switch(this.coinSeletedSetting){
-        case 'ethereum':
-          break
-        case 'bitcoin':
-          console.log('this.address = ', this.address)
-          registAddr = Base58check.decode(registAddr).toString('hex')
-          break
-        case 'ripple':
-          registAddr = RippleBase58Check.decode(registAddr).toString('hex')
-          break
-      }
+        console.log('Lets Do it')
+        let registAddr = this.address
+        switch(this.coinSeletedSetting){
+            case 'ethereum':
+            break
+            case 'bitcoin':
+            console.log('this.address = ', this.address)
+            registAddr = Base58check.decode(registAddr).toString('hex')
+            break
+            case 'ripple':
+            registAddr = RippleBase58Check.decode(registAddr).toString('hex')
+            break
+        }
 
-      if(!registAddr.startsWith('0x')){
-        registAddr = '0x' + registAddr
-      }
+        if(!registAddr.startsWith('0x')){
+            registAddr = '0x' + registAddr
+        }
 
-      const contract = this.contractResolver
-      const node = namehash.hash(this.domain)
-      const coinType = this.getChainId(this.coinSeletedSetting)
-      console.log('node = ', node)
-      console.log('coinType = ', coinType)
-      console.log('registAddr = ', registAddr)
-      contract.methods.setAddr(node, coinType, registAddr).send({from: this.accounts}).then((response) => {
-      //contract.methods.setAddr(node, registAddr).send({from: this.accounts}).then((response) => {
-        console.log('response = ', response)
-      })
+        const contract = this.contractResolver
+        const node = namehash.hash(this.domain)
+        const coinType = this.getChainId(this.coinSeletedSetting)
+        console.log('node = ', node)
+        console.log('coinType = ', coinType)
+        console.log('registAddr = ', registAddr)
+
+        contract.methods.setAddr(node, coinType, registAddr).send({from: this.accounts}).then((response) => {
+        //contract.methods.setAddr(node, registAddr).send({from: this.accounts}).then((response) => {
+            console.log('response = ', response)
+        })
+
+
+        // #
+        // 
+        const CONFIG_SET_NAME_ON = false
+
+        if (CONFIG_SET_NAME_ON) {
+            const reverseRegistrarAbi = [{"constant":false,"inputs":[{"name":"owner","type":"address"},{"name":"resolver","type":"address"}],"name":"claimWithResolver","outputs":[{"name":"node","type":"bytes32"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"owner","type":"address"}],"name":"claim","outputs":[{"name":"node","type":"bytes32"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"ens","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"defaultResolver","outputs":[{"name":"","type":"address"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"addr","type":"address"}],"name":"node","outputs":[{"name":"ret","type":"bytes32"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"name","type":"string"}],"name":"setName","outputs":[{"name":"node","type":"bytes32"}],"payable":false,"type":"function"},{"inputs":[{"name":"ensAddr","type":"address"},{"name":"resolverAddr","type":"address"}],"payable":false,"type":"constructor"}]
+
+            this.ens.owner('addr.reverse').then((address) => {
+                const reverseRegistarAddr = address
+                console.log('reverseRegistarAddr = ', reverseRegistarAddr)
+                const web3 = this.web3
+                const reverseRegistrar = new web3.eth.Contract(reverseRegistrarAbi, reverseRegistarAddr)
+
+                // REF : https://github.com/ensdomains/ensjs/blob/master/index.js#L261
+                registAddr = registAddr.slice(2)
+                const reverseName = registAddr.toLowerCase() + '.addr.reverse'
+                const nodeForReverse = namehash.hash(reverseName)
+                console.log('reverseName = ', reverseName)
+                console.log('node = ', node)
+                console.log('nodeForReverse = ', nodeForReverse)
+
+                reverseRegistrar.methods.setName(this.domain.slice(0, -4)).send({ from: this.accounts }).then((response) => {
+                    console.log('response = ', response)
+                    this.ens.owner(reverseName).then((address) => {
+                        console.log('address = ', address)
+                        /*
+                        const nameToSet = this.domain //.slice(0, -4)
+                        console.log('nameToSet = ', nameToSet)
+                        contract.methods.setName(nodeForReverse, nameToSet).send({from: this.accounts}).then((response) => {
+                            console.log('response = ', response)
+                        })
+                        */
+                    })
+                })
+            })
+        }
     },
     getChainId (option) {
       switch(option){
@@ -241,6 +287,14 @@ export default {
         case "ripple": return "144"
         default: throw new Error('Invalid Option')
       }
+    },
+    getName (address) {
+        console.log('address to reverse = ', address)
+        const reverseContract = this.ens.reverse(address)
+        console.log('reverseContract = ', reverseContract)
+        reverseContract.name().then((domain) => {
+        this.domainAddrName = domain
+        })            
     },
     onClickTest () {
       console.log('coin : ', this.coinSeletedTest)
@@ -264,45 +318,46 @@ export default {
             alert('Resolver is not support multicoin')
             resolverContract.addr().then((address) => {
               this.domainAddr = address
+              this.getName(this.domainAddr)
             })
-            return
+          } else {
+            const node = namehash.hash(this.domainTest)
+            const chainId = this.getChainId(this.coinSeletedTest)
+            console.log('chainId = ', chainId)
+            contract.methods.addr(node, chainId).call().then((address) => {
+              console.log('address = ', address)
+              if (!address) {
+                this.domainAddr = 'No Address'
+                return
+              }
+              switch(this.coinSeletedTest){
+                case "ethereum": 
+                  this.domainAddr = address
+                  break
+                case "bitcoin":{
+                  if(address.startsWith('0x')) {
+                    address = address.slice(2)
+                  }
+                  console.log('address = ', address)
+                  const bytes = Buffer.from(address, 'hex')
+                  this.domainAddr = Base58check.encode(bytes)
+                  break
+                }
+                case "ripple":{
+                  if(address.startsWith('0x')) {
+                    address = address.slice(2)
+                  }
+                  console.log('address = ', address)
+                  const bytes = Buffer.from(address, 'hex')
+                  this.domainAddr = RippleBase58Check.encode(bytes)
+                  break
+                }
+              }
+
+            })
+            this.getName(this.domainAddr)
           }
 
-          const node = namehash.hash(this.domainTest)
-          const chainId = this.getChainId(this.coinSeletedTest)
-          console.log('chainId = ', chainId)
-          contract.methods.addr(node, chainId).call().then((address) => {
-            console.log('address = ', address)
-            if (!address) {
-              this.domainAddr = 'No Address'
-              return
-            }
-            switch(this.coinSeletedTest){
-              case "ethereum": 
-                this.domainAddr = address
-                break
-              case "bitcoin":{
-                if(address.startsWith('0x')) {
-                  address = address.slice(2)
-                }
-                console.log('address = ', address)
-                const bytes = Buffer.from(address, 'hex')
-                this.domainAddr = Base58check.encode(bytes)
-                break
-              }
-              case "ripple":{
-                if(address.startsWith('0x')) {
-                  address = address.slice(2)
-                }
-                console.log('address = ', address)
-                const bytes = Buffer.from(address, 'hex')
-                this.domainAddr = RippleBase58Check.encode(bytes)
-                break
-              }
-            }
-          })
-          let test = Base58check.decode('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa').toString('hex')
-          console.log('test = ', test)
         })
       })
     }

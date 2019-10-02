@@ -329,6 +329,22 @@ module.exports = {
           "outputs": [],
           "type": "function"
         },
+        {
+          "constant": false,
+          "inputs": [
+            {
+              "name": "node",
+              "type": "bytes32"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            }
+          ],
+          "name": "setName",
+          "outputs": [],
+          "type": "function"
+        },
   
       ]
   
